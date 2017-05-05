@@ -211,26 +211,21 @@ class LstmModel(models.BaseModel):
       model in the 'predictions' key. The dimensions of the tensor are
       'batch_size' x 'num_classes'.
     """
-    lstm_size = FLAGS.lstm_cells
-    number_of_layers = FLAGS.lstm_layers
+    lstm_size = FLAGS.lstm_cells # default is 1024
+    number_of_layers = FLAGS.lstm_layers # default is 2
 
-    stacked_lstm = tf.contrib.rnn.MultiRNNCell(
-            [
-                tf.contrib.rnn.BasicLSTMCell(
-                    lstm_size, forget_bias=1.0)
-                for _ in range(number_of_layers)
-                ])
-
-    loss = 0.0
+    stacked_lstm = tf.contrib.rnn.MultiRNNCell([tf.contrib.rnn.LSTMCell(lstm_size, forget_bias=1.0) for _ in range(number_of_layers)])
 
     outputs, state = tf.nn.dynamic_rnn(stacked_lstm, model_input,
                                        sequence_length=num_frames,
                                        dtype=tf.float32)
 
+    fc_input = outputs[:,-1,:]
+    print(fc_input)
     aggregated_model = getattr(video_level_models,
                                FLAGS.video_level_classifier_model)
 
     return aggregated_model().create_model(
-        model_input=state[-1].h,
+        model_input=fc_input,
         vocab_size=vocab_size,
         **unused_params)
